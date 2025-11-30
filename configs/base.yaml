@@ -1,0 +1,67 @@
+#
+# Update dataset_path with the downloaded CSV before running experiments.
+data:
+  dataset_path: data/raw/toniot/train_test_network.csv
+  feature_columns:
+    - duration
+    - src_port
+    - dst_port
+    - src_bytes
+    - dst_bytes
+    - missed_bytes
+    - src_pkts
+    - src_ip_bytes
+    - dst_pkts
+    - dst_ip_bytes
+    - http_request_body_len
+    - http_response_body_len
+    - http_status_code
+  categorical_columns:
+    - proto
+    - service
+    - conn_state
+    - http_method
+    - weird_name
+  target_column: label
+  positive_label: 1
+  negative_label: 0
+  train_label_filter: [0]
+  test_split: 0.2
+  validation_split: 0.1
+  num_clients: 5
+  min_samples_per_client: 256
+  iid: true
+  log_transform_columns:
+    - duration
+    - src_bytes
+    - dst_bytes
+  seed: 42
+training:
+  epochs: 5
+  batch_size: 128
+  learning_rate: 0.001
+  weight_decay: 0.00001
+  early_stopping_patience: 3
+  early_stopping_delta: 0.0001
+  latent_noise_std: 0.05
+model:
+  input_dim: 13
+  encoder_layers: [512, 256, 128, 64, 32]
+  decoder_layers: [64, 128, 256, 512]
+  latent_dim: 24
+  dropout: 0.2
+  activation: relu
+  latent_normalization: true
+federated:
+  rounds: 25
+  clients_per_round: 3
+  aggregation: fedavg
+  evaluation_round_interval: 1
+  seed: 42
+  anomaly_threshold_quantile: 0.85
+  threshold_metric: f1
+  threshold_min_recall: 0.6
+  threshold_min_precision: 0.6
+  threshold_grid_size: 200
+  threshold_max_fpr: 0.1
+output_dir: outputs
