@@ -1,4 +1,4 @@
-# IoT Project team5
+# FedIoT 팀5 레퍼런스 구현
 
 ## 프로젝트 개요
 
@@ -16,11 +16,32 @@
 - `scripts/download_dataset.py`는 공개 IoT 이상 징후 데이터셋을 내려받고 압축 해제·샘플 통계 확인까지 수행할 수 있도록 제공되며, CSV 요약과 라벨 분포 확인 옵션을 포함합니다.
 
 ## 코드 구조
-- [configs/](configs) : 실험 전역 설정. `base.yaml`에서 데이터 경로, 하이퍼파라미터, 연합 학습 파라미터를 선언합니다.
-- [scripts/](scripts) : 데이터 준비(`download_dataset.py`), 학습 실행(`run_fediot.py`), ROC/PR 곡선 시각화(`plot_threshold_curves.py`) 스크립트가 위치합니다.
-- [src/federated/](src/federated) : 클라이언트 래퍼([client.py](src/federated/client.py#L13-L45)), 로컬 트레이너([trainer.py](src/federated/trainer.py#L13-L95)), 서버 오케스트레이터([server.py](src/federated/server.py#L21-L185)), 지표 계산기([metrics.py](src/federated/metrics.py#L8-L54))를 제공합니다.
-- [src/models/](src/models) : 오토인코더 기반 이상 탐지 모델([autoencoder.py](src/models/autoencoder.py#L13-L96))을 정의합니다.
-- [src/utils/](src/utils) : 로그 포맷 설정용 헬퍼([logging.py](src/utils/logging.py#L4-L21))가 포함됩니다.
+## 코드 구조
+```
+프로젝트 루트
+├─ configs/
+│  └─ base.yaml
+├─ scripts/
+│  ├─ download_dataset.py
+│  ├─ plot_threshold_curves.py
+│  └─ run_fediot.py
+├─ src/
+│  ├─ config.py
+│  ├─ federated/
+│  │  ├─ client.py
+│  │  ├─ metrics.py
+│  │  ├─ server.py
+│  │  └─ trainer.py
+│  ├─ models/
+│  │  ├─ LSTM-autoencoder.py
+│  │  └─ autoencoder.py
+│  └─ utils/
+│     └─ logging.py
+└─ requirements.txt
+```
+configs 경로([configs](configs))는 실험 전역 설정을 포함하며 [base.yaml](configs/base.yaml)에서 데이터 경로와 하이퍼파라미터를 선언합니다.
+scripts 경로([scripts](scripts))는 데이터 다운로드, 학습 실행, 결과 시각화 스크립트를 담고 있습니다.
+src 루트([src](src))에는 실험 로직이 모여 있으며, 설정 객체([config.py](src/config.py#L1-L108)), 연합 학습 모듈([src/federated](src/federated)), 모델 정의([src/models](src/models)), 공통 유틸리티([src/utils](src/utils))로 구성됩니다.
 
 ### 모델·학습 설정
 - [ModelConfig](src/config.py#L45-L55)는 인코더/디코더 레이어 폭, 잠재 벡터 차원, 활성화 함수, 드롭아웃, 레이어 정규화를 파라미터화합니다. 기본 `encoder_layers`와 `decoder_layers`는 대칭 구조로 설정되어 있으며 입력 차원은 데이터셋 로딩 시점에 갱신됩니다.
