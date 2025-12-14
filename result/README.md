@@ -1,5 +1,6 @@
 # 실험에 대한 Result 페이지 입니다
 
+## Global Threshold
 <div>
   <img src="https://github.com/iot-team5/iot-project-team5/blob/main/result/threshold.png?raw=true" />
 </div>
@@ -9,7 +10,7 @@
 - 정상값 기반의 학습 데이터로 훈련 했기에, 낮은 값으로 수렴합니다.
 - 이 Threshold는 차후, Anomaly Detection에 사용됩니다.
 
-
+## Confusion Matrix
 <div>
   <img src="https://github.com/iot-team5/iot-project-team5/blob/main/result/confusion-matrix.png?raw=true" />
 </div>
