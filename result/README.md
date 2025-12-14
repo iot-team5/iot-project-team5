@@ -1,7 +1,7 @@
 # 실험에 대한 Result 페이지 입니다
 
 <div>
-  <img src="https://github.com/iot-team5/iot-project-team5/blob/main/result/confusion-matrix.png?raw=true" />
+  <img src="https://github.com/iot-team5/iot-project-team5/blob/main/result/threshold.png?raw=true" />
 </div>
 - Global Model로 산출한 Global Threshold 값은 다음과 같습니다.
 - Global Threshold: 0.0324
