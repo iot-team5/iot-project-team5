@@ -1,77 +1,75 @@
-# iot-project
+# IoT Project team5
 
-# FedIoT Reference Implementation Plan
+## 프로젝트 개요
 
-This workspace provides a reproducible scaffold for studying the FedIoT architecture described in the FedML research paper as well as experimenting with IoT anomaly detection using federated learning. The code base follows the step-by-step execution plan outlined below.
+### 연구 배경·문제 정의
+- 본 프로젝트는 [Iot_paper.pdf](Iot_paper.pdf)에 소개된 FedIoT 연구를 기반으로, IoT 트래픽 이상 징후를 중앙 서버에 raw 데이터를 모으지 않고 탐지하려는 문제를 다룹니다.
+- IoT 단말이 생성하는 고주기 네트워크 데이터는 개인정보와 대역폭 제한으로 인해 중앙 집중 학습이 어렵기 때문에, FedAvg 기반 연합학습과 오토인코더를 결합한 FedDetect 방식을 참고해 재현성을 확보하는 것이 목표입니다.
+- 다수의 디바이스가 서로 다른 분포를 가진다는 점을 고려해, 디바이스별 로컬 학습과 글로벌 모델 집계, 그리고 공격 유형 전반에 대응하는 임계값 산출을 한 워크플로우로 묶었습니다.
 
-## 1. 논문 심층 분석 및 환경 구축
-- 코드 구조는 `src/` 패키지로 모듈화되어 논문에서 제시한 FedIoT 구성요소(클라이언트, 서버, Autoencoder)를 독립적으로 실험할 수 있게 설계했습니다.
-- 실험 설정은 `configs/base.yaml` 에 정리되어 있으며, YAML 기반 설정 로더(`src/config.py`)를 통해 쉽게 변경할 수 있습니다.
-- 실행 환경은 Python 3.10+을 기준으로 하며, `requirements.txt`에 필요한 라이브러리를 정리했습니다. PyTorch 기반 Autoencoder와 FedAvg 로직을 사용합니다.
+## 논문 구현 설명
 
-## 2. 데이터 분할 및 로컬 구현
-- `src/data/dataset.py` 는 IoT 이상 탐지용 CSV 데이터셋을 로드하고, 표준화 및 학습/평가 분할을 수행합니다.
-- `src/data/partition.py` 는 IID / 비-IID 설정에 따라 클라이언트별 데이터를 분할합니다. 넘파이 기반으로 구현되어 다양한 데이터셋에 적용 가능합니다.
-- `src/models/autoencoder.py` 는 심층 Autoencoder를 구성하며, 레이어/활성화/드롭아웃 파라미터를 설정 파일에서 제어할 수 있습니다.
-- `src/federated/trainer.py` 는 각 클라이언트의 로컬 학습 루프를 정의하고, 조기 종료와 손실 추적을 지원합니다.
+### 데이터셋·전처리
+- 기본 설정은 [configs/base.yaml](configs/base.yaml)의 `data.dataset_path`가 가리키는 TON_IoT 네트워크 캡처(csv)를 사용하며, 프로젝트 루트 `data/raw/` 디렉터리에 위치시키도록 구성돼 있습니다.
+- `feature_columns`, `categorical_columns`, `log_transform_columns` 등은 [DataConfig](src/config.py#L12-L29)에서 정의되며, 수치형/범주형 분리, 로그 스케일 변환 대상, 라벨 필터(기본값: 정상 라벨만 학습) 등을 제어합니다.
+- 데이터 분할은 학습/검증/테스트를 비율(`test_split`, `validation_split`) 기반으로 나누고, `num_clients`, `min_samples_per_client`, `iid` 플래그에 따라 클라이언트별 파티션을 구성하도록 설계되어 있습니다. 실제 로더 구현은 현재 리포지토리에 포함돼 있지 않아 `src/data` 모듈을 추가해야 실행이 가능합니다.
+- `scripts/download_dataset.py`는 공개 IoT 이상 징후 데이터셋을 내려받고 압축 해제·샘플 통계 확인까지 수행할 수 있도록 제공되며, CSV 요약과 라벨 분포 확인 옵션을 포함합니다.
 
-## 3. FedIoT 알고리즘 재구현 및 검증
-- `src/federated/server.py` 는 FedAvg 기반의 중앙 서버 로직을 제공합니다. 라운드마다 클라이언트를 샘플링하고, 가중 평균으로 파라미터를 집계합니다.
-- 재구성 오차 기반 이상 탐지를 위해 자동으로 학습 데이터에서 임계값을 추정하고(`anomaly_threshold_quantile`), 테스트셋에 대해 Accuracy/Recall을 산출합니다.
-- `scripts/run_fediot.py` 는 전체 파이프라인을 실행하는 진입점으로, 라운드별 결과를 JSON 파일로 저장하고 최종 글로벌 모델을 `outputs/` 디렉토리에 기록합니다.
+## 코드 구조
+- [configs/](configs) : 실험 전역 설정. `base.yaml`에서 데이터 경로, 하이퍼파라미터, 연합 학습 파라미터를 선언합니다.
+- [scripts/](scripts) : 데이터 준비(`download_dataset.py`), 학습 실행(`run_fediot.py`), ROC/PR 곡선 시각화(`plot_threshold_curves.py`) 스크립트가 위치합니다.
+- [src/federated/](src/federated) : 클라이언트 래퍼([client.py](src/federated/client.py#L13-L45)), 로컬 트레이너([trainer.py](src/federated/trainer.py#L13-L95)), 서버 오케스트레이터([server.py](src/federated/server.py#L21-L185)), 지표 계산기([metrics.py](src/federated/metrics.py#L8-L54))를 제공합니다.
+- [src/models/](src/models) : 오토인코더 기반 이상 탐지 모델([autoencoder.py](src/models/autoencoder.py#L13-L96))을 정의합니다.
+- [src/utils/](src/utils) : 로그 포맷 설정용 헬퍼([logging.py](src/utils/logging.py#L4-L21))가 포함됩니다.
 
-## 4. 최종 정리 및 발표 준비
-- 실행 결과는 시간 스탬프를 포함한 JSON 로그(`outputs/history_*.json`)로 수집되어 손쉽게 시각화할 수 있습니다.
-- `src/utils/logging.py` 를 통해 표준 로깅이 설정되며, 발표 자료 작성 시 손실 및 지표 변화 추이를 정리하기 용이합니다.
+### 모델·학습 설정
+- [ModelConfig](src/config.py#L45-L55)는 인코더/디코더 레이어 폭, 잠재 벡터 차원, 활성화 함수, 드롭아웃, 레이어 정규화를 파라미터화합니다. 기본 `encoder_layers`와 `decoder_layers`는 대칭 구조로 설정되어 있으며 입력 차원은 데이터셋 로딩 시점에 갱신됩니다.
+- [TrainingConfig](src/config.py#L32-L42)는 로컬 에폭 수, 배치 크기, Adam 옵티마이저 학습률과 weight decay, 얼리 스토핑 기준(`early_stopping_patience`, `early_stopping_delta`), 잠재 공간 노이즈 강도(`latent_noise_std`)를 제어합니다.
+- 로컬 업데이트는 [LocalTrainer](src/federated/trainer.py#L24-L95)가 담당하며, 미니배치 오토인코더 학습과 얼리 스토핑 로직, 잠재 노이즈 주입(훈련 시만 활성화)을 포함합니다.
+- 글로벌 라운드는 [FederatedServer](src/federated/server.py#L30-L185)가 관리하고, `clients_per_round`, `rounds`, `aggregation` 등은 [FederatedConfig](src/config.py#L58-L72)로 조정합니다.
 
-## 빠른 시작
+### 결과·평가 지표
+- 각 라운드마다 서버는 검증 세트 재구성 오차를 기반으로 임계값을 탐색하고, 조건(`threshold_metric`, `threshold_min_recall`, `threshold_min_precision`, `threshold_max_fpr`)을 만족하는 후보를 선택합니다. 실패 시 학습 데이터의 `anomaly_threshold_quantile`을 사용해 폴백합니다.
+- 테스트 단계에서는 [compute_metrics](src/federated/metrics.py#L8-L54)가 정확도, 재현율, 정밀도, F1, FPR, 특이도 및 혼동 행렬 카운트를 반환하며, 평균 재구성 오차와 선택된 임계값이 추가 저장됩니다.
+- 학습 로그와 라운드별 결과는 [scripts/run_fediot.py](scripts/run_fediot.py#L98-L139)에서 JSON 히스토리(`outputs/history_*.json`)와 글로벌 모델 가중치(`outputs/global_model.pt`)로 남습니다.
+- 후처리 스크립트 [scripts/plot_threshold_curves.py](scripts/plot_threshold_curves.py#L107-L205)는 저장된 모델을 불러 ROC/PR 곡선을 그려 `outputs/roc_pr_curves.png`로 저장하며, 선택 임계값에서의 검증/테스트 지표를 콘솔에 출력합니다.
 
-1. **의존성 설치**
-   ```bash
-   python3 -m venv .venv
-   source .venv/bin/activate
-   pip install -r requirements.txt
-   ```
+## 실행/설치 매뉴얼
 
-2. **데이터 준비**
-    - 공개 IoT 이상 탐지 데이터셋은 `scripts/download_dataset.py` 로 직접 내려받을 수 있습니다. 예)
-       ```bash
-       python scripts/download_dataset.py --url <DATASET_URL> --output data/raw/toniot.zip --decompress
-       ```
-       `<DATASET_URL>` 위치에는 TON_IoT 텔레메트리 ZIP과 같은 공식 배포 링크를 넣으세요.
-    - 압축 해제로 생성된 CSV 구조를 확인하려면 다음과 같이 요약을 실행합니다.
-       ```bash
-       python scripts/download_dataset.py --summarize <EXTRACTED_CSV> --label-column <LABEL_COLUMN_NAME>
-       ```
-       `<EXTRACTED_CSV>`에는 실제로 추출된 CSV 경로(예: `data/raw/toniot/Telemetry/Train_data.csv`)를 지정하고, 필요하면 `--separator`나 `--encoding` 옵션을 함께 사용하세요.
-    - 요약 결과를 참고하여 `configs/base.yaml`의 `data.dataset_path`, `feature_columns`, `target_column`, `positive_label`, `negative_label` 값을 데이터셋에 맞게 조정하세요. 사용 전 각 데이터셋의 라이선스 조건도 확인하시기 바랍니다.
+### requirements 파일
+- 프로젝트 루트의 [requirements.txt](requirements.txt)는 PyTorch, NumPy, Pandas, scikit-learn, matplotlib, PyYAML 등 실험을 재현하는 데 필요한 최소 의존성을 정의합니다.
+- GPU 가속이 필요하다면 PyTorch를 CUDA 버전에 맞춰 별도로 설치한 뒤 나머지 패키지를 `pip install -r requirements.txt`로 추가하는 것을 권장합니다.
 
-3. **시뮬레이션 실행**
-   ```bash
-   python scripts/run_fediot.py --config configs/base.yaml
-   ```
+### 환경 준비 및 실행 순서
+1. 가상환경 생성 및 활성화
+	```bash
+	python -m venv .venv
+	source .venv/bin/activate
+	python -m pip install --upgrade pip
+	```
+2. 의존성 설치
+	```bash
+	pip install -r requirements.txt
+	```
+3. 데이터 내려받기 (예시: TON_IoT 네트워크 캡처)
+	```bash
+	python scripts/download_dataset.py --url <CSV_OR_ARCHIVE_URL> --decompress --summarize <상대경로> --label-column label
+	```
+	- 다운로드한 파일 경로를 `configs/base.yaml`의 `data.dataset_path`로 지정하고, 필요 시 특성/범주형 목록을 데이터셋 스키마에 맞게 조정합니다.
+4. 데이터 로더 구현 확인
+	- `src/data` 모듈(예: `dataset.py`, `__init__.py`)이 아직 리포지토리에 포함되지 않았으므로, `load_iot_dataset`과 `partition_dataset` 함수를 구현하거나 외부에서 가져와야 합니다.
+5. 연합 학습 실행
+	```bash
+	python scripts/run_fediot.py --config configs/base.yaml --output outputs/exp_toniot
+	```
+	- 실행 중 콘솔 로그에서 클라이언트별 라벨 구성과 라운드별 글로벌 지표를 확인할 수 있으며, 결과물은 `--output`으로 지정한 디렉터리에 저장됩니다.
 
-4. **결과 확인**
-   - `outputs/history_*.json`에서 라운드별 손실 및 성능을 확인합니다.
-   - `outputs/global_model.pt`은 학습된 Autoencoder 가중치를 담고 있습니다.
+### 후처리 및 시각화
+- 학습 완료 후, 저장된 모델과 동일한 설정을 사용해 아래 명령으로 ROC/PR 곡선을 생성합니다.
+  ```bash
+  python scripts/plot_threshold_curves.py --config configs/base.yaml --model outputs/exp_toniot/global_model.pt --output outputs/exp_toniot/roc_pr_curves.png
+  ```
+- 결과 이미지와 콘솔 요약을 레포트 혹은 발표 자료에 활용하고, 논문과의 수치 비교 시 설정 차이(클라이언트 수, 라운드 수, 하이퍼파라미터)를 명시하는 것이 좋습니다.
 
-## 향후 작업 제안
-- FedML 레퍼런스 구현과 비교 분석을 위해 공식 저장소(`https://github.com/FedML-AI/FedML`)를 클론하고, 본 코드와의 구조 차이를 문서화하세요.
-- IoT 데이터셋(예: TON_IoT, UNSW-NB15 등)을 적용하고, 클라이언트 수/분포를 달리하여 성능 변화를 실험하세요.
-- 지표 확장을 위해 Precision, F1-score, AUC 등을 추가하고, 발표 자료에 활용할 시각화 스크립트를 작성하세요.
-
-## 2025-11-28 실험 요약
-- `configs/base.yaml` 최신 설정은 심층 오토인코더(Encoder 5층, LayerNorm, latent noise 0.05)와 검증 FPR 상한(`threshold_max_fpr=0.1`)을 사용합니다.
-- `scripts/run_fediot.py --config configs/base.yaml` 실행 결과:
-   - 검증: 정밀도 0.977, 재현율 0.753, FPR 0.058, F1 0.850, 정확도 0.798.
-   - 테스트: 정밀도 0.977, 재현율 0.757, FPR 0.057, F1 0.853, 정확도 0.801.
-   - 선택된 임계값은 0.1745이며, 혼동행렬은 TP 24,391 / FP 570 / TN 9,430 / FN 7,818입니다.
-- `scripts/plot_threshold_curves.py --config configs/base.yaml --output outputs/roc_pr_curves_v3.png` 로 생성된 ROC/PR 플롯에서 검증/테스트 AUC는 각각 ROC≈0.91, PR≈0.96으로 나타났습니다.
-
-## 개선 메모 및 다음 단계
-1. 임계값 튜닝: `threshold_max_fpr`, `threshold_min_recall`, `threshold_min_precision`을 조합해 FPR–Recall 트레이드오프 표를 작성하고, 운영 요구에 맞는 포인트를 선택합니다.
-2. 정밀도 유지·재현율 향상: `training.latent_noise_std`, `model.dropout`을 추가로 조정하거나, latent 구조를 확장해 공격 재현율을 0.8 이상으로 끌어올리는 방안을 탐색합니다.
-3. 혼합 피처 실험: 범주형 세분화(예: `type`, `service` 하위 그룹)나 파생 피처 추가, 혹은 시계열 윈도우 기반 피처를 도입해 ROC 상단부를 더 왼쪽/위쪽으로 이동시키는 실험을 수행합니다.
-4. 결과 문서화: `outputs/roc_pr_curves_v3.png`와 최신 혼동행렬을 발표 자료에 포함하고, baseline(Threshold FPR 제한 전) 결과와 비교 그래프/표를 추가하세요.
-
-위 항목을 완료하면 FPR을 낮춘 상태에서도 재현율 방어선이 어떤지 명확히 설명할 수 있으며, 다음 단계 개선 계획과 실험 로그가 README에서 바로 추적 가능해집니다.
+## 참고 자료 및 주의사항
+- 논문 전문은 [Iot_paper.pdf](Iot_paper.pdf), 발표 개요는 [[사물인터넷-오전반]_팀5_프로젝트2_발표자료.pdf]([%EC%82%AC%EB%AC%BC%EC%9D%B8%ED%84%B0%EB%84%B7-%EC%98%A4%EC%A0%84%EB%B0%98]_%ED%8C%805_%ED%94%84%EB%A1%9C%EC%A0%9D%ED%8A%B82_%EB%B0%9C%ED%91%9C%EC%9E%90%EB%A3%8C.pdf)에서 확인할 수 있습니다.
