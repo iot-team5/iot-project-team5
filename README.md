@@ -18,26 +18,29 @@
 - 도구: [scripts/download_dataset.py](scripts/download_dataset.py#L1-L210)가 다운로드, 압축 해제, CSV 요약, 라벨 통계를 제공.
 
 ## 코드 구조
-- 프로젝트 루트
-    - configs/
-        - base.yaml
-    - scripts/
-        - download_dataset.py
-        - plot_threshold_curves.py
-        - run_fediot.py
-    - src/
-        - config.py
-        - federated/
-            - client.py
-            - metrics.py
-            - server.py
-            - trainer.py
-        - models/
-            - LSTM-autoencoder.py
-            - autoencoder.py
-        - utils/
-            - logging.py
-    - requirements.txt
+```
+프로젝트 루트
+├─ configs/
+│  └─ base.yaml
+├─ scripts/
+│  ├─ download_dataset.py
+│  ├─ plot_threshold_curves.py
+│  └─ run_fediot.py
+├─ src/
+│  ├─ config.py
+│  ├─ federated/
+│  │  ├─ client.py
+│  │  ├─ metrics.py
+│  │  ├─ server.py
+│  │  └─ trainer.py
+│  ├─ models/
+│  │  ├─ LSTM-autoencoder.py
+│  │  └─ autoencoder.py
+│  └─ utils/
+│     └─ logging.py
+└─ requirements.txt
+```
+
 - configs([configs](configs)): 실험 전역 설정을 보관하며 [base.yaml](configs/base.yaml)에서 데이터 경로·하이퍼파라미터 선언.
 - scripts([scripts](scripts)): 데이터 다운로드, 학습 실행, 결과 시각화 스크립트 집합.
 - src([src](src)): 설정([config.py](src/config.py#L1-L108)), 연합 학습([src/federated](src/federated)), 모델([src/models](src/models)), 유틸([src/utils](src/utils))을 포함한 핵심 로직.
