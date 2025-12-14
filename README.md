@@ -22,6 +22,9 @@
 프로젝트 루트
 ├─ configs/
 │  └─ base.yaml
+├─ result/
+│  ├─ confusion-matrix.png
+│  └─ threshold.png
 ├─ scripts/
 │  ├─ download_dataset.py
 │  ├─ plot_threshold_curves.py
