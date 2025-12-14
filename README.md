@@ -58,8 +58,9 @@ src 루트([src](src))에는 실험 로직이 모여 있으며, 설정 객체([c
 ## 실행/설치 매뉴얼
 
 ### requirements 파일
-- 프로젝트 루트의 [requirements.txt](requirements.txt)는 PyTorch, NumPy, Pandas, scikit-learn, matplotlib, PyYAML 등 실험을 재현하는 데 필요한 최소 의존성을 정의합니다.
-- GPU 가속이 필요하다면 PyTorch를 CUDA 버전에 맞춰 별도로 설치한 뒤 나머지 패키지를 `pip install -r requirements.txt`로 추가하는 것을 권장합니다.
+### requirements 파일
+- 프로젝트 루트의 [requirements.txt](requirements.txt)는 목적별로 의존성을 정리해 두었으며, NumPy·Pandas(1.24/2.0 계열), scikit-learn(1.3+), PyYAML(6.x), requests(2.31+), matplotlib(3.7+), PyTorch(2.1+)와의 호환 범위를 명시했습니다.
+- GPU 가속이 필요하다면 PyTorch를 CUDA 빌드에 맞춰 직접 설치한 뒤 나머지 패키지를 `pip install -r requirements.txt`로 추가하는 것을 권장합니다.
 
 ### 환경 준비 및 실행 순서
 1. 가상환경 생성 및 활성화
